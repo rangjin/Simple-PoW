@@ -36,6 +36,7 @@ unsigned long long proofOfWork(const char *data, int target, unsigned long long 
             for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
                 printf("%02x", hash[i]);
             }
+            printf("\n");
             return nonce;
         }
     }
@@ -45,17 +46,9 @@ unsigned long long proofOfWork(const char *data, int target, unsigned long long 
 
 int main(int argc, char** argv)
 {
-	int clntSd;
+	int clntSd, readLen, dataLen, targetLen, target;
 	struct sockaddr_in clntAddr;
-	int clntAddrLen, readLen, recvByte, maxBuff;
-	char wBuff[BUFSIZ];
-    char rBuff[BUFSIZ];
-
-    char data[BUFSIZ];
-    int dataLen;
-
-	char targetBuff[BUFSIZ];
-    int targetLen, target;
+	char wBuff[BUFSIZ], rBuff[BUFSIZ], data[BUFSIZ], targetBuff[BUFSIZ];
 
     unsigned long long ans, start;
 
@@ -72,8 +65,7 @@ int main(int argc, char** argv)
 	clntAddr.sin_addr.s_addr = inet_addr(argv[1]);
 	clntAddr.sin_port = htons(atoi(argv[2]));
 
-	if(connect(clntSd, (struct sockaddr *) &clntAddr,
-			    sizeof(clntAddr)) == -1)
+	if(connect(clntSd, (struct sockaddr *) &clntAddr, sizeof(clntAddr)) == -1)
 	{
 		close(clntSd);
 		err_proc();	
@@ -88,26 +80,27 @@ int main(int argc, char** argv)
 
     printf("%s, %d\n", data, target);
 
-    while(1)
-	{
+    while(1) {
         readLen = read(clntSd, rBuff, sizeof(rBuff));
         rBuff[readLen] = '\0';
         printf("%s\n", rBuff);
+        if (rBuff[0] == 'E') {
+            break;
+        }
 
         start = strtoull(rBuff, 0, 10);
 
         ans = proofOfWork(data, target, start);
         if (ans == 0ULL) {
-            sprintf(wBuff, "NO %lld", start);
+            sprintf(wBuff, "N %lld", start);
             write(clntSd, wBuff, strlen(wBuff));
         } else {
-            sprintf(wBuff, "ans = %lld", ans);
+            sprintf(wBuff, "Y %lld", ans);
             write(clntSd, wBuff, strlen(wBuff));
         }
 	}
-	printf("END ^^\n");
-	close(clntSd);
 
+	close(clntSd);
 	return 0;
 }
 

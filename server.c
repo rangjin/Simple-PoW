@@ -6,44 +6,67 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <limits.h>
 
-int i = 0, k = 100000;
-int state = 1;
+int i = 0, k = 100000, cnt = 0, state = 1;
+const char *data, *target;
+unsigned long long ans = ULLONG_MAX;
 
-void * client_module(void * data)
-{
-	char rBuff[BUFSIZ];
+void * client_module(void * sd) {
+	char rBuff[BUFSIZ], tmp[12];
 	int readLen;
-	int connectSd;
-	connectSd = *((int *) data);
-	while(state)
-	{
-        char tmp[12] = {0x0};
+	int connectSd = *((int *) sd);
+
+	write(connectSd, data, strlen(data));
+	sleep(2);
+	write(connectSd, target, strlen(target));
+	sleep(2);
+
+	while(state) {
         sprintf(tmp, "%d", i);
         write(connectSd, tmp, sizeof(tmp));
         i = i + k;
 
-		readLen = read(connectSd, rBuff, sizeof(rBuff)-1);
-		if(readLen <= 0) break;	
+		readLen = read(connectSd, rBuff, sizeof(rBuff) - 1);
 		rBuff[readLen] = '\0';
-		printf("Client(%d): %s\n",connectSd,rBuff);
-		if (rBuff[0] == 'a') {
+		printf("Client(%d): %s\n", connectSd, rBuff);
+		if (rBuff[0] == 'Y') {
 			state = 0;
+			char can[sizeof(rBuff) - 2];
+			int j = 2;
+			for (int j = 0; j < sizeof(rBuff) - 2; j++) {
+				can[j] = rBuff[j + 2];
+			}
+			unsigned long long candidate = strtoull(can, 0, 10);
+			if (candidate < ans) {
+				ans = candidate;
+			}
+
 			break;
 		}
 	}
+
+	sprintf(tmp, "%s", "END");
+	write(connectSd, tmp, sizeof(tmp));
+	sleep(2);
+
 	fprintf(stderr,"The client is disconnected.\n");
+	cnt--;
 	close(connectSd);
+
+	if (cnt == 0) {
+		printf("%lld\n", ans);
+		exit(0);
+	}
 }
 
 int main(int argc, char** argv)
 {
-    const char *data = "201928492019284920192849";
-    const char *target = "7";
+    data = "201928492019284920192849";
+    target = "7";
 
-	int listenSd, connectSd;
+	int listenSd, connectSd, clntAddrLen, strLen;
 	struct sockaddr_in srvAddr, clntAddr;
-	int clntAddrLen, strLen;
 
 	pthread_t thread;
 	
@@ -71,15 +94,13 @@ int main(int argc, char** argv)
 			continue;
 		} else {
 			printf("A client is connected...\n");
-			write(connectSd, data, strlen(data));
-			sleep(2);
-			write(connectSd, target, strlen(target));
-			sleep(3);
 		}	
 
+		cnt++;
 		pthread_create(&thread, NULL, client_module, (void *) &connectSd);
 		pthread_detach(thread);
 	}
+
 	close(listenSd);
 	return 0;
 }
