@@ -50,12 +50,12 @@ void * client_module(void * sd) {
 	write(connectSd, tmp, sizeof(tmp));
 	sleep(2);
 
-	fprintf(stderr,"The client is disconnected.\n");
+	fprintf(stderr, "The client is disconnected.\n");
 	cnt--;
 	close(connectSd);
 
 	if (cnt == 0) {
-		printf("%lld\n", ans);
+		printf("ans = %lld\n", ans);
 		exit(0);
 	}
 }
