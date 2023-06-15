@@ -118,10 +118,18 @@ int main(int argc, char *argv[]) {
     }
     freeaddrinfo(peer_address);
 
-    printf("Connected.\n");
-
     dataLen = read(socket_peer, data, sizeof(data));
     data[dataLen] = '\0';
+
+    if (strcmp(data, "Cannot connect to Server. It's fulled.\n") == 0) {
+        printf("%s", data);
+        CLOSESOCKET(socket_peer);
+
+        printf("Finished.\n");
+        return 0;
+    } else {
+        printf("Connected.\n");
+    }
 
     targetLen = read(socket_peer, targetBuff, sizeof(targetBuff));
     targetBuff[targetLen] = '\0';
@@ -133,48 +141,23 @@ int main(int argc, char *argv[]) {
     unsigned long long ans, start;
 
     while(1) {
-        fd_set reads;
-        FD_ZERO(&reads);
-        FD_SET(socket_peer, &reads);
-        FD_SET(0, &reads);
-
-        struct timeval timeout;
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;
-
-        if (select(socket_peer+1, &reads, 0, 0, &timeout) < 0) {
-            fprintf(stderr, "select() failed. (%d)\n", GETSOCKETERRNO());
-            return 1;
+        int readLen = read(socket_peer, rBuff, sizeof(rBuff));
+        if (readLen < 1) {
+            printf("Connection closed by peer.\n");
+            break;
         }
+        rBuff[readLen] = '\0';
 
-        if (FD_ISSET(socket_peer, &reads)) {
-            int readLen = read(socket_peer, rBuff, sizeof(rBuff));
-            if (readLen < 1) {
-                printf("Connection closed by peer.\n");
-                break;
-            }
-            rBuff[readLen] = '\0';
+        start = strtoull(rBuff, 0, 10);
+        printf("%lld\n", start);
+        ans = proofOfWork(data, target, start);
 
-            start = strtoull(rBuff, 0, 10);
-            printf("%lld\n", start);
-            ans = proofOfWork(data, target, start);
-
-            if (ans == 0ULL) {
-                sprintf(wBuff, "N %lld", start);
-                write(socket_peer, wBuff, strlen(wBuff));
-            } else {
-                sprintf(wBuff, "Y %lld", ans);
-                write(socket_peer, wBuff, strlen(wBuff));
-            }
-        }
-
-        if (FD_ISSET(0, &reads)) {
-            char read[4096];
-            if (!fgets(read, 4096, stdin)) break;
-            if (strncmp(read, "exit()", 6) == 0) {
-                break;
-            }
-            send(socket_peer, read, strlen(read), 0);
+        if (ans == 0ULL) {
+            sprintf(wBuff, "N %lld", start);
+            write(socket_peer, wBuff, strlen(wBuff));
+        } else {
+            sprintf(wBuff, "Y %lld", ans);
+            write(socket_peer, wBuff, strlen(wBuff));
         }
     }
 

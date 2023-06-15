@@ -32,13 +32,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
+#include <stdlib.h>
 
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s) close(s)
 #define SOCKET int
 #define GETSOCKETERRNO() (errno)
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 4) {
+        fprintf(stderr, "usage: client_num data targer\n");
+        return 1;
+    }
+
     printf("Configuring local address...\n");
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
@@ -79,11 +86,13 @@ int main() {
 
     printf("Waiting for connections...\n");
 
-    int n = 0, k = 100000;
-    const char *data = "201928492019284920192849";
-    const char *target = "7";
+    unsigned long long n, k = 100000L;
+    int cnt = 0, max = atoi(argv[1]);
+    const char *data = argv[2];
+    const char *target = argv[3];
     char rBuff[1024], wBuff[4096];
     int state = 1;
+    time_t begin, end;
 
     while(state) {
         fd_set reads;
@@ -108,17 +117,35 @@ int main() {
                         return 1;
                     }
 
-                    FD_SET(socket_client, &master);
-                    if (socket_client > max_socket)
-                        max_socket = socket_client;
-                    
-                    printf("New connection from %d\n", socket_client);
-                    write(socket_client, data, strlen(data));
-                    write(socket_client, target, strlen(data));
-                    sleep(2);
-                    sprintf(wBuff, "%d", n);
-                    write(socket_client, wBuff, strlen(wBuff));
-                    n = n + 100000;
+                    if (cnt < max) {
+                        FD_SET(socket_client, &master);
+                        if (socket_client > max_socket)
+                            max_socket = socket_client;
+                        cnt++;
+
+                        printf("New connection from %d\n", socket_client);
+                        write(socket_client, data, strlen(data));
+                        sleep(1);
+                        write(socket_client, target, strlen(data));
+                    } else {
+                        sprintf(wBuff, "Cannot connect to Server. It's fulled.\n");
+                        write(socket_client, wBuff, strlen(wBuff));
+                        CLOSESOCKET(socket_client);
+                        continue;
+                    }
+
+                    if (n == 0 && cnt == max) {
+                        printf("start!!!\n");
+                        sleep(1);
+                        begin = time(NULL);
+                        for (int j = 1; j <= max_socket; j++) {
+                            if (FD_ISSET(j, &master) && j != socket_listen) {
+                                sprintf(wBuff, "%llu", n);
+                                write(j, wBuff, strlen(wBuff));
+                                n = n + k;
+                            }
+                        }
+                    }
                 } else {
                     int bytes_received = read(i, rBuff, 1024);
                     if (bytes_received < 1) {
@@ -132,8 +159,14 @@ int main() {
                     printf("%s\n", rBuff);
                     if (rBuff[0] == 'Y') {
                         state = 0;
+                        end = time(NULL);
+                        for (int j = 1; j <= max_socket; j++) {
+                            if (FD_ISSET(j, &master) && j != socket_listen) {
+                                CLOSESOCKET(j);
+                            }
+                        }
                     } else {
-                        sprintf(wBuff, "%d", n);
+                        sprintf(wBuff, "%llu", n);
                         write(i, wBuff, strlen(wBuff));
                         n = n + k;
                     }                    
@@ -142,6 +175,7 @@ int main() {
         }
     }
 
+    printf("time spent: %lf\n", (double) end - (double) begin);
     printf("Closing listening socket...\n");
     CLOSESOCKET(socket_listen);
 
