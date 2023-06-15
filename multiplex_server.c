@@ -42,7 +42,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 4) {
-        fprintf(stderr, "usage: client_num data targer\n");
+        fprintf(stderr, "usage: client_num data target\n");
         return 1;
     }
 
