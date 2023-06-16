@@ -11,6 +11,9 @@ unsigned long long proofOfWork(const char *data, int target) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
 
     for (nonce = 0; nonce < ULLONG_MAX; nonce++) {
+        if (nonce % 100000ULL == 0ULL) {
+            printf("%llu\n", nonce);
+        }
         sprintf(input, "%s%llu", data, nonce);
         SHA256(input, strlen(input), hash);
 
