@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <string.h>
 #include <openssl/sha.h>
+#include <stdlib.h>
 
 unsigned long long proofOfWork(const char *data, int target) {
     unsigned long long nonce;
@@ -36,16 +37,21 @@ unsigned long long proofOfWork(const char *data, int target) {
     return 0;
 }
 
-int main() {
-    const char *data = "201928492019284920192849";
-    int target = 8;
-    double timeSpent = 0.0;
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        fprintf(stderr, "usage: data target\n");
+        return 1;
+    }
+
+    const char *data = argv[1];
+    const char *target_array = argv[2];
+    int target = atoi(target_array);
 
     time_t begin = time(NULL);
     unsigned long long nonce = proofOfWork(data, target);
     time_t end = time(NULL);
 
-    printf("\nnonce: %llu, time spent: %lf\n", nonce, (double) end - (double) begin);
+    printf("\nnonce: %llu, time spent: %d\n", nonce, (int) end - (int) begin);
 
     return 0;
 }
