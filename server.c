@@ -144,11 +144,6 @@ int main(int argc, char *argv[]) {
                             }
                         }
                     }
-                    if (n != 0ULL) {
-                        sprintf(wBuff, "%llu", n);
-                        write(socket_client, wBuff, strlen(wBuff));
-                        n = n + k;
-                    }
                 } 
                 // 클라이언트 소켓에 대한 요청 처리
                 else {
@@ -156,7 +151,7 @@ int main(int argc, char *argv[]) {
                     // 클라이언트에서 전송한 데이터 확인
                     // 클라이언트로의 입력이 진행되지 않는경우, 연결 종료
                     if (bytes_received < 1) {
-                        sprintf(wBuff, "End connection from %d\n", i);
+                        printf(wBuff, "End connection from %d\n", i);
                         FD_CLR(i, &master);
                         cnt--;
                         CLOSESOCKET(i);
