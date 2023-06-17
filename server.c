@@ -145,7 +145,6 @@ int main(int argc, char *argv[]) {
                         }
                     }
                     if (n != 0ULL) {
-                        printf("!!!!!!!\n");
                         sprintf(wBuff, "%llu", n);
                         write(socket_client, wBuff, strlen(wBuff));
                         n = n + k;
