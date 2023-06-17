@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     const char *data = argv[2];
     const char *target = argv[3];
     char rBuff[1024], wBuff[4096];
-    int state = 1;
+    int state = 1, start = 0;
     time_t begin, end;
 
     while(state) {
@@ -132,8 +132,9 @@ int main(int argc, char *argv[]) {
                     }
 
                     // 작업증명이 처음 시작되는 경우, 시작 시간 저장
-                    if (n == 0ULL && cnt == max) {
+                    if (!start && cnt == max) {
                         printf("start!!!\n");
+                        start = 1;
                         sleep(1);
                         begin = time(NULL);
                         for (int j = 1; j <= max_socket; j++) {
@@ -143,6 +144,10 @@ int main(int argc, char *argv[]) {
                                 n = n + k;
                             }
                         }
+                    } else if (start) {
+                        sprintf(wBuff, "%llu", n);
+                        write(socket_client, wBuff, strlen(wBuff));
+                        n = n + k;
                     }
                 } 
                 // 클라이언트 소켓에 대한 요청 처리
