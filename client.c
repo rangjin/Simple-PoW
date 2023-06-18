@@ -39,6 +39,7 @@ void *poWThread(void *arg) {
         sprintf(input, "%s%llu", data, nonce); // input 문자열 생성
         SHA256(input, strlen(input), hash); // 문자열 해시 계산
 
+        // 작업 증명
         int state = 1, k = target / 2;
         for (int i = 0; i < k; i++) {
             if (hash[i] != 0x00) {
@@ -49,7 +50,8 @@ void *poWThread(void *arg) {
         if (target % 2 != 0 && hash[k] > 0x0F) {
             state = 0;
         }
-        // nonce 검증 성공
+
+        // 작업 증명 성공 시 해당 nonce 리턴
         if (state) {
             printf("%llu: ", nonce);
             for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
@@ -59,7 +61,8 @@ void *poWThread(void *arg) {
             return (void *)nonce;
         }
     }
-
+    
+    // 실패 시 0 리턴
     return (void *)0;
 }
 
@@ -175,15 +178,19 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // 결과 종합, 서버에 전달
         if (ans == 0ULL) {
+            // 할당된 범위 내에서 작업 증명 실패 시
             sprintf(wBuff, "N %lld", start);
             write(socket_peer, wBuff, strlen(wBuff));
         } else {
+            // 할당된 범위 내에서 작업 증명 성공 시
             sprintf(wBuff, "Y %lld", ans);
             write(socket_peer, wBuff, strlen(wBuff));
         }
     }
 
+    // 소켓 close, 프로그램 종료
     printf("Closing socket...\n");
     CLOSESOCKET(socket_peer);
 

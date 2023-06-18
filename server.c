@@ -118,6 +118,7 @@ int main(int argc, char *argv[]) {
                             max_socket = socket_client;
                         cnt++;
 
+                        // 챌린지 값과 난이도를 클라이언트에게 전달
                         printf("New connection from %d\n", socket_client);
                         write(socket_client, data, strlen(data));
                         sleep(1);
@@ -131,12 +132,14 @@ int main(int argc, char *argv[]) {
                         continue;
                     }
 
-                    // 작업증명이 처음 시작되는 경우, 시작 시간 저장
+                    // 작업증명이 처음 시작되는 경우
                     if (!start && cnt == max) {
                         printf("start!!!\n");
                         start = 1;
                         sleep(1);
+                        // 시작 시간 저장
                         begin = time(NULL);
+                        // 연결되어 있는 모든 클라이언트에게 최초 작업 증명 범위 할당
                         for (int j = 1; j <= max_socket; j++) {
                             if (FD_ISSET(j, &master) && j != socket_listen) {
                                 sprintf(wBuff, "%llu", n);
@@ -144,7 +147,9 @@ int main(int argc, char *argv[]) {
                                 n = n + k;
                             }
                         }
-                    } else if (start) {
+                    }
+                    // 새로 접속한 클라이언트에게 최초 작업 증명 범위 할당 
+                    else if (start) {
                         sprintf(wBuff, "%llu", n);
                         write(socket_client, wBuff, strlen(wBuff));
                         n = n + k;
@@ -152,8 +157,9 @@ int main(int argc, char *argv[]) {
                 } 
                 // 클라이언트 소켓에 대한 요청 처리
                 else {
-                    int bytes_received = read(i, rBuff, 1024);
                     // 클라이언트에서 전송한 데이터 확인
+                    int bytes_received = read(i, rBuff, 1024);
+
                     // 클라이언트로의 입력이 진행되지 않는경우, 연결 종료
                     if (bytes_received < 1) {
                         printf(wBuff, "End connection from %d\n", i);
@@ -164,19 +170,21 @@ int main(int argc, char *argv[]) {
                         rBuff[bytes_received] = '\0';
                     }
 
-                    // Y를 수신한경우, 작업증명 종료임을 판단하고, end 시간 저장
+                    // Y를 수신한경우, 작업증명 종료임을 판단
                     printf("%s\n", rBuff);
                     if (rBuff[0] == 'Y') {
                         state = 0;
+                        // 종료 시간 저장
                         end = time(NULL);
                         for (int j = 1; j <= max_socket; j++) {
                             if (FD_ISSET(j, &master) && j != socket_listen) {
+                                // 연결되어 있는 소켓 close
                                 CLOSESOCKET(j);
                             }
                         }
                         break;
                     } 
-                    // 그렇지 않은 경우, 다음번 탐색을 시작할 수 증가.
+                    // 그렇지 않은 경우, 클라이언트에게 다음 탐색 범위 할당
                     else {
                         sprintf(wBuff, "%llu", n);
                         write(i, wBuff, strlen(wBuff));
@@ -187,7 +195,7 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    // 실행시간 출력 후 소켓 닫기
+    // 실행시간 출력 후 소켓 닫고 프로그램 종료
     printf("time spent: %d\n", (int) end - (int) begin);
     printf("Closing listening socket...\n");
     CLOSESOCKET(socket_listen);
