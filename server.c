@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
                                 CLOSESOCKET(j);
                             }
                         }
+                        break;
                     } 
                     // 그렇지 않은 경우, 다음번 탐색을 시작할 수 증가.
                     else {
